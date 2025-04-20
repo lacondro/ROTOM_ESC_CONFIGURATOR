@@ -120,7 +120,7 @@ class VescApp(customtkinter.CTk):
     def __init__(self):
         super().__init__()
 
-        self.title("VESC Control Panel")
+        self.title("ROTOM FLUXIUM CONFIGURATOR")
         self.geometry("900x700")
 
         # --- State Variables ---
@@ -135,6 +135,7 @@ class VescApp(customtkinter.CTk):
         # --- Appearance ---
         customtkinter.set_appearance_mode("System")
         customtkinter.set_default_color_theme("blue")
+        # Themes: "blue" (default), "green", "dark-blue"
 
         # --- Configure grid layout (2x1) ---
         self.grid_columnconfigure(1, weight=1)
@@ -160,7 +161,7 @@ class VescApp(customtkinter.CTk):
 
         self.logo_label = customtkinter.CTkLabel(
             self.sidebar_frame,
-            text="VESC Control",
+            text="ROTOM" + "\n" + "FLUXIUM",
             font=customtkinter.CTkFont(size=20, weight="bold"),
         )
         self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
@@ -213,7 +214,7 @@ class VescApp(customtkinter.CTk):
         action_frame.grid(row=0, column=0, padx=10, pady=(10, 5), sticky="ew")
 
         read_button = customtkinter.CTkButton(
-            action_frame, text="Read MCConf", command=self._read_mcconf_gui
+            action_frame, text="Read Motor Config", command=self._read_mcconf_gui
         )
         read_button.pack(side="left", padx=10, pady=5)
         self.read_mcconf_button = (
@@ -222,7 +223,7 @@ class VescApp(customtkinter.CTk):
 
         write_button = customtkinter.CTkButton(
             action_frame,
-            text="Write MCConf",
+            text="Write Motor Config",
             command=self._write_mcconf_gui,
             fg_color="orange",
             hover_color="dark orange",
@@ -309,14 +310,14 @@ class VescApp(customtkinter.CTk):
         action_frame.grid(row=0, column=0, padx=10, pady=(10, 5), sticky="ew")
 
         read_button = customtkinter.CTkButton(
-            action_frame, text="Read AppConf", command=self._read_appconf_gui
+            action_frame, text="Read APP Config", command=self._read_appconf_gui
         )
         read_button.pack(side="left", padx=10, pady=5)
         self.read_appconf_button = read_button
 
         write_button = customtkinter.CTkButton(
             action_frame,
-            text="Write AppConf",
+            text="Write APP Config",
             command=self._write_appconf_gui,
             fg_color="orange",
             hover_color="dark orange",

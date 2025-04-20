@@ -71,7 +71,7 @@ class VescApp(customtkinter.CTk):
     def __init__(self):
         super().__init__()
 
-        self.title("VESC Control Panel")
+        self.title("ROTOM FLUXIUM CONFIGURATOR")
         self.geometry("800x600")
 
         # --- State Variables ---
@@ -112,7 +112,7 @@ class VescApp(customtkinter.CTk):
 
         self.logo_label = customtkinter.CTkLabel(
             self.sidebar_frame,
-            text="VESC Control",
+            text="ROTOM" + "\n" + "FLUXIUM",
             font=customtkinter.CTkFont(size=20, weight="bold"),
         )
         self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
