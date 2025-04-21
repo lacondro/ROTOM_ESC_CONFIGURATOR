@@ -66,8 +66,8 @@ READ_BUFFER_SIZE = 4096
 # --- Parameter Mappings (String <-> VESC Enum/Value) ---
 # !! These values MUST match your firmware version !!
 MOTOR_TYPES_MAP = {0: "BLDC", 1: "DC", 2: "FOC"}
-SENSOR_PORT_MODES_MAP = {0: "Disabled", 1: "Hall", 2: "ABI", 3: "AS5047 SPI"}
-FOC_SENSOR_MODES_MAP = {0: "Sensorless", 1: "Hall", 2: "Encoder", 3: "HFI"}
+SENSOR_PORT_MODES_MAP = {0: "HALL", 1: "ABI", 2: "AS5047 SPI"}
+FOC_SENSOR_MODES_MAP = {0: "Sensorless", 1: "Encoder", 2: "Hall"}
 BOOL_MAP = {False: "False", True: "True"}
 APP_MODES_MAP = {
     0: "None",
@@ -76,27 +76,34 @@ APP_MODES_MAP = {
     3: "UART",
     4: "PPM+UART",
     5: "ADC+UART",
-    6: "NRF",
     7: "CUSTOM",
 }
 CAN_BAUD_RATES_MAP = {0: "125K", 1: "250K", 2: "500K", 3: "1M"}
-CAN_STATUS_MODES_MAP = {
-    0: "Disabled",
-    1: "VESC Status",
-    2: "VESC Status Ext",
-    3: "Heartbeat",
-    4: "Motor Temp",
-    5: "Full Status 1",
-    6: "Full Status 2",
+CAN_MODES_MAP = {
+    0: "VESC",
+    1: "UAVCAN",
+    2: "COMM BRIDGE",
+    3: "UNUSED",
 }
+
+UAVCAN_RAW_MODES_MAP = {
+    0: "Current",
+    1: "Current NoRev Brake",
+    2: "Duty Cycle",
+    3: "RPM",
+}
+
 PPM_CONTROL_TYPES_MAP = {
     0: "Disabled",
     1: "Current",
-    2: "Current No Rev",
-    3: "Duty Cycle",
-    4: "Duty Cycle No Rev",
-    5: "PID Pos",
-    6: "PID Pos No Rev",
+    2: "Current No Reverse",
+    3: "Current No Reverse with Brake",
+    4: "Duty Cycle",
+    5: "Duty Cycle No Reverse",
+    6: "PID Pos",
+    7: "PID Pos No Rev",
+    10: "PID POS 180 deg",
+    11: "PID POS 360 deg",
 }
 
 
@@ -111,7 +118,8 @@ FOC_SENSOR_MODES_MAP_REV = create_reverse_map(FOC_SENSOR_MODES_MAP)
 BOOL_MAP_REV = create_reverse_map(BOOL_MAP)
 APP_MODES_MAP_REV = create_reverse_map(APP_MODES_MAP)
 CAN_BAUD_RATES_MAP_REV = create_reverse_map(CAN_BAUD_RATES_MAP)
-CAN_STATUS_MODES_MAP_REV = create_reverse_map(CAN_STATUS_MODES_MAP)
+CAN_MODES_MAP_REV = create_reverse_map(CAN_MODES_MAP)
+UAVCAN_RAW_MODES_MAP_REV = create_reverse_map(UAVCAN_RAW_MODES_MAP)
 PPM_CONTROL_TYPES_MAP_REV = create_reverse_map(PPM_CONTROL_TYPES_MAP)
 
 
@@ -273,7 +281,7 @@ class VescApp(customtkinter.CTk):
             list(BOOL_MAP.values()),
         )
         add_mc_setting(
-            "sensor_port_mode",
+            "m_sensor_port_mode",
             "Sensor Port Mode:",
             "combobox",
             list(SENSOR_PORT_MODES_MAP.values()),
@@ -281,9 +289,9 @@ class VescApp(customtkinter.CTk):
         add_mc_setting("l_current_max", "Motor Current Max (A):", "entry")
         add_mc_setting("l_abs_current_max", "Absolute Max Current (A):", "entry")
         add_mc_setting("l_in_current_max", "Batt Current Max (A):", "entry")
-        add_mc_setting("l_in_current_min", "Batt Current Max Regen (A):", "entry")
-        add_mc_setting("l_min_vin", "Batt Volt Cutoff Start (V):", "entry")
-        add_mc_setting("l_max_vin", "Batt Volt Cutoff End (V):", "entry")
+        # add_mc_setting("l_in_current_min", "Batt Current Max Regen (A):", "entry")
+        add_mc_setting("l_battery_cut_start", "Batt Volt Cutoff Start (V):", "entry")
+        add_mc_setting("l_battery_cut_end", "Batt Volt Cutoff End (V):", "entry")
         add_mc_setting(
             "foc_sensor_mode",
             "FOC Sensor Mode:",
@@ -291,7 +299,7 @@ class VescApp(customtkinter.CTk):
             list(FOC_SENSOR_MODES_MAP.values()),
         )
         add_mc_setting(
-            "m_allow_braking", "Allow Braking:", "combobox", list(BOOL_MAP.values())
+            "s_pid_allow_braking", "Allow Braking:", "combobox", list(BOOL_MAP.values())
         )
         add_mc_setting("p_pid_kp", "Position PID Kp:", "entry")
         add_mc_setting("p_pid_ki", "Position PID Ki:", "entry")
@@ -368,18 +376,21 @@ class VescApp(customtkinter.CTk):
             list(CAN_BAUD_RATES_MAP.values()),
         )
         add_app_setting(
-            "can_status_mode",
-            "CAN Status Mode:",
+            "can_mode",
+            "CAN Mode:",
             "combobox",
-            list(CAN_STATUS_MODES_MAP.values()),
+            list(CAN_MODES_MAP.values()),
         )
-        add_app_setting("can_esc_index", "UAVCAN ESC Index:", "entry")
+        add_app_setting("uavcan_esc_index", "UAVCAN ESC Index:", "entry")
         add_app_setting(
-            "uavcan_raw_mode", "UAVCAN Raw Mode:", "combobox", list(BOOL_MAP.values())
-        )
-        add_app_setting("can_status_rate_hz", "UAVCAN Status Rate (Hz):", "entry")
+            "uavcan_raw_mode",
+            "UAVCAN Raw Mode:",
+            "combobox",
+            list(UAVCAN_RAW_MODES_MAP.values()),
+        )  # 새 맵 사용
+
         add_app_setting(
-            "ppm_ctrl_type",
+            "app_ppm_conf.ctrl_type",
             "PPM Control Type:",
             "combobox",
             list(PPM_CONTROL_TYPES_MAP.values()),
@@ -592,9 +603,20 @@ class VescApp(customtkinter.CTk):
         self.connected = is_connected
         if self.connected:
             self.connect_button.configure(text="Disconnect")
+            self._set_ui_state("normal")  # Enable UI elements now connected
+
+            # --- 자동 읽기 시작 ---
+            self._log("Connection successful. Auto-reading configurations...")
+            # 약간의 딜레이 후 MCConf 읽기 시작 (UI 업데이트 반영 시간)
+            self.after(100, self._read_mcconf_gui)
+            # --- 자동 읽기 끝 ---
+
         else:
             self.connect_button.configure(text="Connect")
-        self._set_ui_state("normal")  # Reset UI state based on new connection status
+            # 연결 해제 시 UI 상태 재설정 (연결 관련 버튼만 활성화)
+            self._set_ui_state(
+                "normal"
+            )  # 이렇게 하면 연결 관련 UI만 활성화됨 (내부 로직 확인)
 
     # --- VESC Communication Wrappers (Thread Handling) ---
     def _run_in_thread(self, target_func, args=(), callback=None):
@@ -628,13 +650,18 @@ class VescApp(customtkinter.CTk):
 
     def _operation_complete(self, result, error, callback):
         # (Same as before - note: UI state re-enabled AFTER callback)
+        self._set_ui_state("normal")  # Re-enable UI based on connection status first
+
         if error:
             self._log(f"Error: {error}")
+            # 에러 발생 시에도 콜백을 호출하여 에러 처리를 할 수 있게 함
+            if callback:
+                callback(None, error)  # 결과는 None, 에러 전달
         else:
             self._log(f"Operation completed.")
-        if callback:
-            callback(result, error)
-        self._set_ui_state("normal")  # Re-enable UI based on connection status
+            if callback:
+                callback(result, None)  # 결과 전달, 에러는 None
+        # self._set_ui_state("normal")  # Re-enable UI based on connection status
 
     def _handle_serial_error(self):
         # (Same as before)
@@ -757,14 +784,22 @@ class VescApp(customtkinter.CTk):
         """Callback after MCConf read attempt. Populates MCConf widgets."""
         if error:
             self._log(f"MCConf Read Error: {error}")
-            # Optionally clear widgets or show error state?
             self.current_mc_config = None
-            return  # Stop here
+            # --- MCConf 실패 시에도 AppConf 읽기 시도 (선택적) ---
+            self._log("Attempting to read AppConf despite MCConf error...")
+            self.after(100, self._read_appconf_gui)  # 다음 읽기 예약
+            # --- AppConf 읽기 시도 끝 ---
+            return  # 실패 시 위젯 업데이트 중단
 
         # MCConf Read Success
         self.current_mc_config = result
         self._log("MCConf read successfully. Populating fields...")
         self._populate_widgets(self.mcconf_widgets, result)  # Use helper
+
+        # --- 성공 시 AppConf 자동 읽기 시작 ---
+        self._log("Auto-reading AppConf...")
+        self.after(100, self._read_appconf_gui)  # 다음 읽기 예약
+        # --- AppConf 자동 읽기 끝 ---
 
     def _read_appconf_gui(self):
         """Reads AppConf and updates the App Config tab."""
@@ -778,35 +813,42 @@ class VescApp(customtkinter.CTk):
         if error:
             self._log(f"AppConf Read Error: {error}")
             self.current_app_config = None
+            # AppConf 읽기 실패 시 추가 작업 없음 (자동 읽기 완료)
             return  # Stop here
 
         # AppConf Read Success
         self.current_app_config = result
         self._log("AppConf read successfully. Populating fields...")
         self._populate_widgets(self.appconf_widgets, result)  # Use helper
+        self._log("Auto-reading finished.")  # 모든 자동 읽기 완료 로그
 
     def _populate_widgets(self, widget_dict, config_data):
         """Helper to populate a set of widgets from config data."""
+        print(f"--- Populating Widgets ---")
         for key, widget in widget_dict.items():
             if not widget:
-                continue  # Skip if widget wasn't created properly
+                continue
+            print(f"Processing key: '{key}', Widget: {type(widget)}")
             if key in config_data:
                 value = config_data[key]
+                print(f"  Value found: {value} (Type: {type(value)})")
                 try:
                     if isinstance(widget, customtkinter.CTkComboBox):
-                        # Find string representation using appropriate map
+                        # 1. Correct map and default value
                         map_to_use = None
                         is_bool = False
+                        default_str = "Unknown"  # 기본값 설정
+
                         if key in [
                             "m_invert_direction",
                             "m_allow_braking",
-                            "uavcan_raw_mode",
+                            # "uavcan_raw_mode",
                         ]:
                             map_to_use = BOOL_MAP
                             is_bool = True
                         elif key == "motor_type":
                             map_to_use = MOTOR_TYPES_MAP
-                        elif key == "sensor_port_mode":
+                        elif key == "m_sensor_port_mode":
                             map_to_use = SENSOR_PORT_MODES_MAP
                         elif key == "foc_sensor_mode":
                             map_to_use = FOC_SENSOR_MODES_MAP
@@ -814,41 +856,61 @@ class VescApp(customtkinter.CTk):
                             map_to_use = APP_MODES_MAP
                         elif key == "can_baud_rate":
                             map_to_use = CAN_BAUD_RATES_MAP
-                        elif key == "can_status_mode":
-                            map_to_use = CAN_STATUS_MODES_MAP
-                        elif key == "ppm_ctrl_type":
+                        elif key == "can_mode":
+                            map_to_use = CAN_MODES_MAP
+                        elif key == "uavcan_raw_mode":
+                            map_to_use = UAVCAN_RAW_MODES_MAP
+                        elif key == "app_ppm_conf.ctrl_type":
                             map_to_use = PPM_CONTROL_TYPES_MAP
 
+                        # 2. Get the string value from the map
+                        value_to_set = default_str  # 기본값으로 시작
                         if map_to_use:
-                            widget.set(
-                                map_to_use.get(
-                                    bool(value) if is_bool else value, "Unknown"
-                                )
-                            )
+                            # 불리언 키는 bool()로 변환 후 매핑 조회
+                            lookup_key = bool(value) if is_bool else value
+                            value_to_set = map_to_use.get(lookup_key, default_str)
                         else:
-                            widget.set(
-                                str(value)
-                            )  # Fallback if no map defined for this combo
+                            # 매핑 없는 콤보박스면 그냥 문자열 변환 (이 경우는 없어야 함)
+                            value_to_set = str(value)
+
+                        # 3. Set the string value using widget.set()
+                        widget.set(value_to_set)
+                        print(f"  Set ComboBox to: '{value_to_set}'")
+
                     elif isinstance(widget, customtkinter.CTkEntry):
-                        widget.delete(0, "end")
-                        widget.insert(
-                            0,
-                            f"{value:.4f}" if isinstance(value, float) else str(value),
+                        # 1. Format the value as a string
+                        #    Floats: 소수점 4자리까지 표시 (필요에 따라 조정)
+                        #    Others: 그냥 문자열 변환
+                        value_str = (
+                            f"{value:.4f}" if isinstance(value, float) else str(value)
                         )
+
+                        # 2. Delete existing content first
+                        widget.delete(0, "end")
+
+                        # 3. Insert the new string value at the beginning (index 0)
+                        widget.insert(0, value_str)
+                        print(f"  Set Entry to: '{value_str}'")
+
                 except Exception as e:
-                    print(f"Error populating widget '{key}': {e}")
+                    print(f"  ERROR populating widget '{key}': {e}")
+                    # Optionally indicate error in the widget itself
                     if isinstance(widget, customtkinter.CTkEntry):
                         widget.delete(0, "end")
                         widget.insert(0, "ERROR")
                     elif isinstance(widget, customtkinter.CTkComboBox):
                         widget.set("ERROR")
             else:
-                print(f"Warning: Key '{key}' not found in received config.")
+                print(f"  WARNING: Key '{key}' not found in config data.")
+                # Clear the widget if the key is missing
                 if isinstance(widget, customtkinter.CTkEntry):
                     widget.delete(0, "end")
                     widget.insert(0, "N/A")
                 elif isinstance(widget, customtkinter.CTkComboBox):
-                    widget.set("N/A")
+                    widget.set(
+                        "N/A"
+                    )  # Consider adding "N/A" to combo options if needed
+        print(f"--- Finished Populating ---")
 
     def _write_mcconf_gui(self):
         """Gathers MCConf data from widgets, validates, and writes MCConf."""
@@ -924,66 +986,108 @@ class VescApp(customtkinter.CTk):
                 continue
             try:
                 gui_value_str = widget.get()
-                original_value = base_config.get(
-                    key
-                )  # Get original value for type checking
+                original_value = base_config.get(key)
                 original_type = (
                     type(original_value) if original_value is not None else str
-                )  # Default to string if key missing
+                )
 
+                # --- "N/A" 값 처리 추가 ---
                 if gui_value_str in ["N/A", "Unknown", "ERROR"]:
+                    # 'N/A'는 보통 읽기 실패 시 표시되므로, 쓰기 시에는 오류로 간주
                     errors.append(
-                        f"Invalid value '{gui_value_str}' for {key}. Read settings again?"
+                        f"Invalid value '{gui_value_str}' for {key}. Read settings again."
                     )
-                    continue
+                    continue  # 다음 필드로 넘어감
+                # --- "N/A" 값 처리 끝 ---
 
-                # Convert GUI string back to VESC value
                 vesc_value = None
                 map_rev_to_use = None
                 is_bool = False
 
-                if key in ["m_invert_direction", "m_allow_braking", "uavcan_raw_mode"]:
+                # 1. 어떤 역방향 맵을 사용할지 결정 (MCConf 및 AppConf 키 모두 포함)
+                # MCConf Keys
+                if key == "m_invert_direction":
+                    map_rev_to_use = BOOL_MAP_REV
+                    is_bool = True
+                elif key == "s_pid_allow_braking":
                     map_rev_to_use = BOOL_MAP_REV
                     is_bool = True
                 elif key == "motor_type":
                     map_rev_to_use = MOTOR_TYPES_MAP_REV
-                elif key == "sensor_port_mode":
-                    map_rev_to_use = SENSOR_PORT_MODES_MAP_REV
+                elif key == "m_sensor_port_mode":
+                    map_rev_to_use = (
+                        SENSOR_PORT_MODES_MAP_REV  # <-- 정확한 키 이름 확인!
+                    )
                 elif key == "foc_sensor_mode":
                     map_rev_to_use = FOC_SENSOR_MODES_MAP_REV
+                # AppConf Keys - !!!! 여기가 중요 !!!!
                 elif key == "app_to_use":
                     map_rev_to_use = APP_MODES_MAP_REV
                 elif key == "can_baud_rate":
                     map_rev_to_use = CAN_BAUD_RATES_MAP_REV
-                elif key == "can_status_mode":
-                    map_rev_to_use = CAN_STATUS_MODES_MAP_REV
-                elif key == "ppm_ctrl_type":
-                    map_rev_to_use = PPM_CONTROL_TYPES_MAP_REV
+                elif key == "can_mode":
+                    map_rev_to_use = (
+                        CAN_MODES_MAP_REV  # <-- 이것도 콤보박스일 수 있음! 확인 필요
+                    )
+                elif (
+                    key == "uavcan_raw_mode"
+                ):  # uavcan_raw_mode 처리 블록 추가 또는 수정
+                    map_rev_to_use = UAVCAN_RAW_MODES_MAP_REV
+                elif key == "app_ppm_conf.ctrl_type":
+                    map_rev_to_use = PPM_CONTROL_TYPES_MAP_REV  # <-- 이것도 콤보박스일 수 있음! 확인 필요
 
+                # 2. 값 변환 시도
                 if isinstance(widget, customtkinter.CTkComboBox) and map_rev_to_use:
-                    vesc_value = map_rev_to_use[gui_value_str]  # Use reverse map
-                elif isinstance(widget, customtkinter.CTkEntry):
-                    # Convert to original type (float or int)
-                    if original_type == float:
-                        vesc_value = float(gui_value_str)
-                    elif original_type == int:
-                        vesc_value = int(gui_value_str)
+                    if gui_value_str in map_rev_to_use:
+                        vesc_value = map_rev_to_use[gui_value_str]
                     else:
-                        vesc_value = gui_value_str  # Fallback (less safe)
+                        errors.append(f"Invalid selection '{gui_value_str}' for {key}.")
+                        continue
+                elif isinstance(widget, customtkinter.CTkEntry):
+                    try:
+                        # AppConf는 주로 int 타입이 많으므로 int 변환 우선 고려
+                        if original_type == int:
+                            vesc_value = int(gui_value_str)
+                        elif original_type == float:
+                            vesc_value = float(gui_value_str)
+                        else:
+                            vesc_value = gui_value_str  # Fallback
+                    except ValueError:
+                        errors.append(
+                            f"Invalid number format '{gui_value_str}' for {key}."
+                        )
+                        continue
                 elif isinstance(
                     widget, customtkinter.CTkComboBox
-                ):  # Combo without specific map?
-                    vesc_value = gui_value_str  # Assume string value? Or convert to original type?
+                ):  # 콤보인데 map_rev_to_use가 None
+                    # 이전에 정의되지 않은 콤보박스 키 처리
+                    # !!!! can_status_mode 와 ppm_ctrl_type 가 이 경우에 해당할 수 있음 !!!!
+                    # 이 키들이 콤보박스라면 위쪽 if/elif 블록에 추가해야 함.
+                    errors.append(
+                        f"Configuration error for ComboBox '{key}'. Check map definition."
+                    )
+                    continue
+                else:
+                    errors.append(
+                        f"Unhandled widget type for key '{key}': {type(widget)}"
+                    )
+                    continue
 
+                # 3. 변환된 vesc_value 저장
                 if vesc_value is not None:
                     config_to_write[key] = vesc_value
                 else:
-                    errors.append(f"Could not convert value for {key}.")
+                    errors.append(f"Value processing failed for {key}.")
 
-            except (ValueError, KeyError) as e:
-                errors.append(f"Invalid input for '{key}': {e}")
+            except KeyError as e:
+                errors.append(
+                    f"Invalid selection '{gui_value_str}' for {key} (Not in map: {e})."
+                )
             except Exception as e:
-                errors.append(f"Error processing '{key}': {e}")
+                errors.append(f"Unexpected error processing '{key}': {e}")
+                import traceback
+
+                traceback.print_exc()
 
         return config_to_write, errors
 
