@@ -998,15 +998,18 @@ class VescApp(customtkinter.CTk):
             self.after(0, self._update_connection_ui, False)
 
     def _disconnect_vesc_thread(self):
-        self._stop_monitor_loop()
-        time.sleep(MONITOR_INTERVAL * 1.1)
+        """Handles disconnection: stops monitor, sends stop command, closes port, resets state."""
+        self._stop_monitor_loop()  # 모니터 루프 먼저 중지
+        time.sleep(MONITOR_INTERVAL * 1.1)  # 잠시 대기
+
+        # 시리얼 포트 닫기 (STOP 명령 포함)
         if self.vesc_serial and self.vesc_serial.is_open:
             try:
                 stop_cmd = encode(SetCurrent(0))
                 with self._monitor_lock:
                     if self.vesc_serial.is_open:
                         self.vesc_serial.write(stop_cmd)
-                        time.sleep(0.1)
+                        time.sleep(0.1)  # 명령 전송 후 짧은 대기
                         self.vesc_serial.close()
                         self._log("Disconnected.")
                     else:
@@ -1021,13 +1024,27 @@ class VescApp(customtkinter.CTk):
                         self._log(
                             f"Error closing serial port after disconnect error: {close_e}"
                         )
+
+        # 내부 상태 변수 리셋
         self.vesc_serial = None
         self.connected = False
         self.current_mc_config = None
         self.current_app_config = None
-        self.after(0, self._clear_config_displays)
-        self.after(0, self._reset_monitor_display)
-        self.after(0, self._update_connection_ui, False)
+
+        # --- GUI 업데이트 예약 제거 ---
+        # 한국어 주석: 이 스레드에서는 GUI 업데이트를 예약하지 않습니다.
+        # self.after(0, self._clear_config_displays)
+        # self.after(0, self._reset_monitor_display)
+        # self.after(0, self._update_connection_ui, False)
+        # --- 제거 끝 ---
+
+        # 한국어 주석: UI 업데이트는 이 스레드를 시작한 _toggle_connection 또는 _on_closing 에서 처리해야 함
+        #             또는 프로그램 종료 시에는 굳이 UI를 업데이트할 필요 없음
+        #             하지만 상태 변경은 로그로 남김
+        self._log("Internal state reset after disconnection.")
+        # 연결 해제 완료 후 메인 스레드에서 UI 상태 업데이트를 트리거할 수 있도록 플래그 설정 또는 이벤트 사용 가능 (선택적 고급 구현)
+        # 예: self.after(0, self._finalize_disconnection_ui)
+        # 여기서는 단순히 스레드 종료. _on_closing 이나 _toggle_connection에서 UI 마무리.
 
     def _update_connection_ui(self, is_connected):
         self.connected = is_connected
