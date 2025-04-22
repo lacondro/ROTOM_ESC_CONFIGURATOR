@@ -205,5 +205,6 @@ missing module named Foundation.NSUserDefaults - imported by Foundation (optiona
 missing module named Foundation.NSKeyValueChangeNewKey - imported by Foundation (optional), darkdetect._mac_detect (optional)
 missing module named Foundation.NSKeyValueObservingOptionNew - imported by Foundation (optional), darkdetect._mac_detect (optional)
 missing module named Foundation.NSObject - imported by Foundation (optional), darkdetect._mac_detect (optional), PyObjCTools.AppHelper (top-level)
+missing module named predefined - imported by crcmod (optional)
 missing module named 'System.IO' - imported by serial.serialcli (top-level)
 missing module named System - imported by serial.serialcli (top-level)
