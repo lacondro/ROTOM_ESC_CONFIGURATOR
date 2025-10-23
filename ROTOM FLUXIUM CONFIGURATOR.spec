@@ -37,9 +37,3 @@ exe = EXE(
     entitlements_file=None,
     icon=['icon.icns'],
 )
-app = BUNDLE(
-    exe,
-    name='ROTOM FLUXIUM CONFIGURATOR.app',
-    icon='icon.icns',
-    bundle_identifier=None,
-)
